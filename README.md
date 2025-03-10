@@ -102,3 +102,18 @@ https://github.com/TrelaDev-Innowise/DatabaseMigrationTool3000Testing](https://g
 This repository includes example SQL queries for testing the migration tool.
 
 
+## 🛠️ Technologies Used
+
+The following technologies were used to build and support the functionality of the Database Migration Tool 3000:
+
+- **Java 17**: The primary programming language used for the implementation of the migration tool.
+- **PostgreSQL**: A relational database management system (RDBMS) supported by the migration tool for managing database migrations.
+- **Maven**: A build automation tool used for managing dependencies and building the project.
+- **Picocli**: A Java library used for building command-line interfaces (CLI). It is used to handle the parameters and commands for the standalone version of the migration tool.
+- **JUnit 5**: A testing framework for writing and running unit tests, used for testing the functionality of the migration tool.
+- **H2 Database**: A lightweight database used in testing scenarios to simulate migrations without requiring an actual PostgreSQL database.
+- **Logback**: A logging framework for Java, providing logging capabilities within the migration tool.
+- **HikariCP**: A connection pooling library for managing database connections efficiently.
+
+
+
