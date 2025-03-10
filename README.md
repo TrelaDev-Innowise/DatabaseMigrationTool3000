@@ -61,7 +61,7 @@ java -jar DatabaseMigrationTool3000-1.0-SNAPSHOT.jar   --url=jdbc:postgresql://l
 ```
 
 ## 📂 Migration File Structure
-Migration files must follow a strict naming format:
+Migration files must follow a strict naming format and must be in SQL format:
 
 ```bash
 V<VERSION>__<DESCRIPTION>.sql
