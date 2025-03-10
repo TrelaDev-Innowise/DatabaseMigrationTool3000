@@ -99,13 +99,6 @@ Validation Requirements:
 Testing repository is available at:[
 https://github.com/TrelaDev-Innowise/DatabaseMigrationTool3000Testing](https://github.com/TrelaDev-Innowise/DatabaseMigrationTool3000Testing)
 
-Example test database:
-
-```java
-// Connecting to local PostgreSQL instance
-String testUrl = "jdbc:postgresql://localhost:5432/testdb";
-String testUser = "tester";
-String testPass = "test123";
-```
+This repository includes example SQL queries for testing the migration tool.
 
 
