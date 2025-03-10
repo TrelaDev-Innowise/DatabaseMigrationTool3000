@@ -12,7 +12,7 @@ Inspired by Flyway, it manages database versions through SQL files, ensuring con
 ## ⚙️ Installation
 1. Clone the repository:
 ```bash
-git clone https://github.com/your-repo/DatabaseMigrationTool3000.git
+git clone https://github.com/TrelaDev-Innowise/DatabaseMigrationTool3000.git
 ```
 
 2. Build the project and install it to your local Maven repository:
