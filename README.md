@@ -96,8 +96,8 @@ Validation Requirements:
 | InvalidFileNaming | Incorrect file name format    | Adjust to the format VX__desc.sql         |
 
 ## 🧪 Testing
-Testing repository is available at:
-[https://github.com/your-repo/MigrationTool3000Testing](https://github.com/your-repo/MigrationTool3000Testing)
+Testing repository is available at:[
+https://github.com/TrelaDev-Innowise/DatabaseMigrationTool3000Testing](https://github.com/TrelaDev-Innowise/DatabaseMigrationTool3000Testing)
 
 Example test database:
 
@@ -108,16 +108,4 @@ String testUser = "tester";
 String testPass = "test123";
 ```
 
-## 💡 Best Practices
-- Use environment variables for sensitive data:
 
-```bash
---password=${DB_PASSWORD}
-```
-
-- Always migrate "up" - never modify executed migrations
-- Regularly export the database schema as a backup
-- Run migrations within manual transactions
-
-## 📄 License
-MIT License - full text in LICENSE file
