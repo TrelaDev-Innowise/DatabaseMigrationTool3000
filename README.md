@@ -5,8 +5,8 @@ A tool for controlled database migration for PostgreSQL, functioning as a Java l
 Inspired by Flyway, it manages database versions through SQL files, ensuring consistency across developers' environments.
 
 ## 📋 Requirements
-- Java JDK 17+
-- PostgreSQL database (version 9.6 or newer)
+- Java JDK 17
+- PostgreSQL database 
 - Apache Maven 3.6+
 
 ## ⚙️ Installation
