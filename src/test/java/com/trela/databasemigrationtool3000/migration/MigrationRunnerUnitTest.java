@@ -30,7 +30,7 @@ class MigrationRunnerUnitTest {
     }
 
     @Test
-    public void testGetDescFromFileName(){
+    public void testGetDescFromFileName() throws MigrationFileNamingException {
         MigrationRunner migrationRunner = new MigrationRunner(null);
         assertEquals("cReated  231123312    TABLES", migrationRunner.getDescFromFileName("V5__cReated__231123312____TABLES.sql"));
     }
