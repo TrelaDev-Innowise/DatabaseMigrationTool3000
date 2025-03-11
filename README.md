@@ -82,7 +82,7 @@ Validation Requirements:
 - Modifying existing migrations is prohibited
 
 ## 🔒 Security Mechanisms
-- Checksums: Each migration is verified by an MD5 checksum
+- Checksums: Each migration is verified using a CRC32 checksum algorithm instead of MD5. This ensures data integrity by generating a unique checksum for every migration file.
 - Transaction Locks: EXCLUSIVE LOCK on the migration table during operations
 - Migration History: All changes are logged in the migration_history table
 - Error Handling: Automatic rollback on failed migrations
