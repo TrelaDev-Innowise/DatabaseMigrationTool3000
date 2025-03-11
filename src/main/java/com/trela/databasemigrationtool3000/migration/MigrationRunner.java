@@ -11,10 +11,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -174,7 +171,7 @@ public class MigrationRunner {
      * @throws SQLException If a database access error occurs.
      */
     public long executeMigration(Connection connection, String fileName, String sql) throws SQLException {
-        long executionTime;
+        long executionTime = -1;
         try (Statement statement = connection.createStatement()) {
             StatementProxy statementProxy = new StatementProxy(statement); // Use a proxy to track execution time
             statementProxy.execute(sql); // Execute the SQL script
@@ -194,7 +191,7 @@ public class MigrationRunner {
      * @param executionTime The execution time in milliseconds.
      * @throws SQLException If a database access error occurs.
      */
-    public void saveMigrationRecord(Connection connection, String fileName, long checksum, String user, long executionTime) throws SQLException {
+    public void saveMigrationRecord(Connection connection, String fileName, long checksum, String user, long executionTime) throws SQLException,MigrationFileNamingException {
         String insertQuery = "INSERT INTO migration_history(version, description, checksum, installed_by, execution_time_ms) VALUES (?, ?, ?, ?, ?)";
 
         String version = getVersionFromFileName(fileName); // Extract version from file name
@@ -222,12 +219,13 @@ public class MigrationRunner {
     private boolean isMigrationExecuted(Connection connection, String version) throws SQLException {
         String query = "SELECT COUNT(*) FROM migration_history WHERE version = ?";
         boolean isVersionAlreadyMigrated = false;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)
+             ) {
             preparedStatement.setString(1, version);
-            ResultSet resultSet = preparedStatement.executeQuery();
+            try(ResultSet resultSet = preparedStatement.executeQuery()){
             if (resultSet.next()) {
                 isVersionAlreadyMigrated = resultSet.getInt(1) > 0;
-            }
+            }}
         }
         return isVersionAlreadyMigrated;
     }
@@ -246,9 +244,11 @@ public class MigrationRunner {
         boolean isChecksumValid = true;
         try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1, version);
-            ResultSet resultSet = preparedStatement.executeQuery();
-            if (resultSet.next()) {
-                isChecksumValid = resultSet.getLong(1) == checksum;
+            try(ResultSet resultSet = preparedStatement.executeQuery()) {
+
+                if (resultSet.next()) {
+                    isChecksumValid = resultSet.getLong(1) == checksum;
+                }
             }
         }
         return isChecksumValid;
@@ -272,13 +272,16 @@ public class MigrationRunner {
      * @param fileName The name of the migration file.
      * @return The description as a string.
      */
-    public String getDescFromFileName(String fileName) {
+    public String getDescFromFileName(String fileName) throws MigrationFileNamingException{
+        if(!fileName.contains("__")){
+            throw new MigrationFileNamingException("The migration file name is invalid: (" + fileName
+                    + "). Correct format is V(version)__(description).(extension), e.g., V1__create_table.sql");
+        }
+
         int firstDoubleUnderScoreIndex = fileName.indexOf("__") + 2;
         String withoutVersion = fileName.substring(firstDoubleUnderScoreIndex);
-
         int lastDotIndex = withoutVersion.lastIndexOf('.');
         String leftPart = (lastDotIndex != -1) ? withoutVersion.substring(0, lastDotIndex) : withoutVersion;
-
         return leftPart.replaceAll("_", " "); // Replace underscores with spaces
     }
 }
