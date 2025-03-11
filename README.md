@@ -43,7 +43,7 @@ Example implementation:
 ```java
 public class Main {
     public static void main(String[] args) {
-        String url = "jdbc:postgresql://localhost:5432/mydb";
+        String url = "jdbc:postgresql://localhost:5432/mymigrationtooldb";
         String user = "admin";
         String password = "1234";
         
