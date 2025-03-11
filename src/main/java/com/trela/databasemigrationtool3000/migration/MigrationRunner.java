@@ -224,7 +224,7 @@ public class MigrationRunner {
         boolean isVersionAlreadyMigrated = false;
         try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1, version);
-            var resultSet = preparedStatement.executeQuery();
+            ResultSet resultSet = preparedStatement.executeQuery();
             if (resultSet.next()) {
                 isVersionAlreadyMigrated = resultSet.getInt(1) > 0;
             }
@@ -246,7 +246,7 @@ public class MigrationRunner {
         boolean isChecksumValid = true;
         try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1, version);
-            var resultSet = preparedStatement.executeQuery();
+            ResultSet resultSet = preparedStatement.executeQuery();
             if (resultSet.next()) {
                 isChecksumValid = resultSet.getLong(1) == checksum;
             }
