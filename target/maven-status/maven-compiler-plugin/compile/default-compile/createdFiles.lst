@@ -1,9 +1,0 @@
-com\trela\databasemigrationtool3000\DatabaseMigrationTool3000.class
-com\trela\databasemigrationtool3000\exception\MigrationVersionGapException.class
-com\trela\databasemigrationtool3000\util\ChecksumUtil.class
-com\trela\databasemigrationtool3000\DatabaseMigrationTool3000CLI.class
-com\trela\databasemigrationtool3000\config\DatabaseManager.class
-com\trela\databasemigrationtool3000\proxy\StatementProxy.class
-com\trela\databasemigrationtool3000\migration\MigrationRunner.class
-com\trela\databasemigrationtool3000\exception\InvalidChecksumException.class
-com\trela\databasemigrationtool3000\exception\MigrationFileNamingException.class
