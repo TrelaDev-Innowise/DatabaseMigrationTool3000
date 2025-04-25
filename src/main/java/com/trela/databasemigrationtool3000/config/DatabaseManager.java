@@ -17,10 +17,9 @@ import java.sql.Statement;
  */
 public class DatabaseManager {
 
-    // Logger for tracking events and errors
     private static final Logger logger = LoggerFactory.getLogger(DatabaseManager.class);
 
-    // Database user for tracking who executed the migrations
+
     private final String user;
 
     // HikariDataSource for managing the database connection pool
@@ -30,10 +29,10 @@ public class DatabaseManager {
     public DatabaseManager(String url, String user, String password) {
         // Configure HikariCP connection pool
         HikariConfig config = new HikariConfig();
-        config.setJdbcUrl(url);      // Set the JDBC URL
-        config.setUsername(user);   // Set the database username
-        config.setPassword(password); // Set the database password
-        this.user = user;           // Store the user for later use
+        config.setJdbcUrl(url);
+        config.setUsername(user);
+        config.setPassword(password);
+        this.user = user;
         this.dataSource = new HikariDataSource(config); // Initialize the connection pool
     }
 
@@ -70,7 +69,6 @@ public class DatabaseManager {
                 migrationHistoryTableExists = true; // Table exists
             }}
         } catch (SQLException e) {
-            // Log the error if the table check fails
             logger.error("Error checking for migration history table!", e);
         }
 
