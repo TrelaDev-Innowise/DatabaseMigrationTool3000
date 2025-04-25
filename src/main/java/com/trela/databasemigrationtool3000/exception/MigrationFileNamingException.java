@@ -6,8 +6,4 @@ public class MigrationFileNamingException extends Exception{
         super(message);
     }
 
-    public MigrationFileNamingException(String message,Throwable cause){
-        super(message,cause);
-    }
-
 }

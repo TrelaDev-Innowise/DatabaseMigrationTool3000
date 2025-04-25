@@ -13,7 +13,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * The `MigrationRunner` class is responsible for executing database migrations
@@ -29,11 +29,9 @@ public class MigrationRunner {
     // DatabaseManager for managing database connections
     private final DatabaseManager dbManager;
 
-    /**
-     * Constructor for MigrationRunner.
-     *
-     * @param dbManager The DatabaseManager instance used to manage database connections.
-     */
+    private boolean wasMigrationExecuted;
+    private long lastMigrationVersion;
+
     public MigrationRunner(DatabaseManager dbManager) {
         this.dbManager = dbManager;
     }
@@ -45,66 +43,23 @@ public class MigrationRunner {
      */
     public void runMigrations(String migrationsFolder) {
         try (Connection connection = dbManager.getConnection()) {
-            boolean wasMigrationExecuted = false;
-            connection.setAutoCommit(false); // Disable auto-commit to manage transactions manually
-
-            // Lock the migration history table to prevent concurrent migrations
+            wasMigrationExecuted = false;
+            connection.setAutoCommit(false);
             lockMigrationTable(connection);
-
-            // List and sort migration files in the specified folder
-            List<Path> migrationFiles = Files.list(Paths.get(migrationsFolder))
-                    .filter(path -> path.toString().toLowerCase().endsWith(".sql")) // Filter for SQL files
-                    .sorted() // Sort files by name (version)
-                    .collect(Collectors.toList());
-
-            long lastMigrationVersion = 0; // Track the last executed migration version
-
-            // Process each migration file
+            List<Path> migrationFiles;
+            try (Stream<Path> stream = Files.list(Paths.get(migrationsFolder))) {
+                migrationFiles = stream
+                        .filter(path -> path.toString().toLowerCase().endsWith(".sql"))
+                        .sorted()
+                        .toList();
+            }
+            lastMigrationVersion = 0;
             for (Path path : migrationFiles) {
-                try {
-                    String fileQuery = Files.readString(path); // Read the SQL file content
-                    String fileName = path.getFileName().toString(); // Get the file name
-                    validateFileName(fileName); // Validate the file name format
-
-                    String version = getVersionFromFileName(fileName); // Extract version from file name
-                    long checksum = ChecksumUtil.calculateChecksum(fileQuery); // Calculate checksum of the file content
-
-                    // Check if the migration has already been executed
-                    boolean isMigrationAlreadyExecuted = isMigrationExecuted(connection, version);
-                    // Validate the checksum of the migration file
-                    boolean isChecksumValid = isChecksumValid(connection, version, checksum);
-
-                    // Ensure migration versions increase sequentially by 1
-                    long versionGap = Long.parseLong(version) - lastMigrationVersion;
-                    if (versionGap == 1) {
-                        lastMigrationVersion++;
-                    } else {
-                        throw new MigrationVersionGapException("Version " + version + " in " + fileName + " is invalid. "
-                                + "Migration versions must increase sequentially by 1.");
-                    }
-
-                    // Throw an exception if the checksum is invalid
-                    if (!isChecksumValid) {
-                        throw new InvalidChecksumException("Checksum mismatch for version " + version);
-                    }
-
-                    // Execute the migration if it hasn't been executed yet
-                    if (!isMigrationAlreadyExecuted) {
-                        wasMigrationExecuted = true;
-                        long executionTime = executeMigration(connection, fileName, fileQuery); // Execute the migration
-                        String installedBy = dbManager.getUser(); // Get the user who executed the migration
-                        saveMigrationRecord(connection, fileName, checksum, installedBy, executionTime); // Save migration record
-                    }
-                } catch (IOException | SQLException | InvalidChecksumException | MigrationVersionGapException | MigrationFileNamingException e) {
-                    // Log the error and roll back the transaction if an error occurs
-                    logger.error("Error processing migration file: {}", path, e);
-                    connection.rollback();
-                    logger.info("Rolling back all the changes...");
-                    return;
-                }
+               boolean wasProcessingSuccessful = processSingleMigration(connection,path);
+               // If exception occur stop the method and log exception
+               if(!wasProcessingSuccessful) return;
             }
 
-            // Commit the transaction if any migrations were executed
             if (wasMigrationExecuted) {
                 logger.info("Committing all new migrations!");
             } else {
@@ -116,12 +71,32 @@ public class MigrationRunner {
         }
     }
 
-    /**
-     * Validates the format of the migration file name.
-     *
-     * @param fileName The name of the migration file.
-     * @throws MigrationFileNamingException If the file name format is invalid.
-     */
+
+    private boolean processSingleMigration(Connection connection, Path path) throws SQLException{
+        boolean wasProcessingSuccessful = true;
+        try {
+            String migrationFileContent = Files.readString(path);
+            String migrationFileName = path.getFileName().toString();
+            String currentMigrationVersion = getVersionFromFileName(migrationFileName);
+            long checksum = ChecksumUtil.calculateChecksum(migrationFileContent);
+            validateFileName(migrationFileName);
+            validateChecksum(connection, currentMigrationVersion, checksum);
+            validateVersionGap(Long.parseLong(currentMigrationVersion), migrationFileName);
+            executeMigration(connection,currentMigrationVersion,migrationFileName,migrationFileContent,checksum); // Execute the migration
+
+        } catch (IOException | SQLException | InvalidChecksumException | MigrationVersionGapException | MigrationFileNamingException e) {
+            logger.error("Error processing migration file: {}", path, e);
+            connection.rollback();
+            logger.info("Rolling back all the changes...");
+            wasProcessingSuccessful = false;
+        }
+        return wasProcessingSuccessful;
+    }
+
+
+
+
+
     public void validateFileName(String fileName) throws MigrationFileNamingException {
         boolean isMigrationFileValid = fileName.matches("^V\\d+__.+\\.[a-zA-Z0-9]+$");
         if (!isMigrationFileValid) {
@@ -130,16 +105,19 @@ public class MigrationRunner {
         }
     }
 
-    /**
-     * Locks the `migration_history` table to prevent concurrent migrations.
-     *
-     * @param connection The database connection.
-     * @throws SQLException If a database access error occurs.
-     */
+    private void validateVersionGap(long currentMigrationVersion, String fileName) throws MigrationVersionGapException{
+        long versionGap = currentMigrationVersion - lastMigrationVersion;
+        if (versionGap != 1){
+            throw new MigrationVersionGapException("Version " + currentMigrationVersion + " in " + fileName + " is invalid. "
+                    + "Migration versions must increase sequentially by 1.");
+        }
+        lastMigrationVersion++;
+    }
+
+
     public void lockMigrationTable(Connection connection) throws SQLException {
         int attemptCount = 50; // Maximum number of attempts to lock the table
         int retryInterval = 1000; // Retry interval in milliseconds
-
         while (attemptCount > 0) {
             try (Statement statement = connection.createStatement()) {
                 statement.execute("LOCK TABLE migration_history IN EXCLUSIVE MODE"); // Lock the table
@@ -161,37 +139,25 @@ public class MigrationRunner {
         }
     }
 
-    /**
-     * Executes a migration SQL script.
-     *
-     * @param connection The database connection.
-     * @param fileName   The name of the migration file.
-     * @param sql        The SQL script to execute.
-     * @return The execution time in milliseconds.
-     * @throws SQLException If a database access error occurs.
-     */
-    public long executeMigration(Connection connection, String fileName, String sql) throws SQLException {
-        long executionTime = -1;
-        try (Statement statement = connection.createStatement()) {
-            StatementProxy statementProxy = new StatementProxy(statement); // Use a proxy to track execution time
-            statementProxy.execute(sql); // Execute the SQL script
-            executionTime = statementProxy.getExecutionTime(); // Get the execution time
-            logger.info("Preparing execution: {}", fileName);
+
+    public void executeMigration(Connection connection, String migrationVersion, String migrationFileName,String migrationContent,long checksum) throws SQLException,MigrationFileNamingException {
+        boolean isMigrationAlreadyExecuted = isMigrationExecuted(connection,migrationVersion);
+        long executionTime;
+        if(!isMigrationAlreadyExecuted) {
+            try (Statement statement = connection.createStatement()) {
+                StatementProxy statementProxy = new StatementProxy(statement); // Use a proxy to track execution time
+                statementProxy.execute(migrationContent);
+                executionTime = statementProxy.getExecutionTime();
+                logger.info("Preparing execution: {}", migrationFileName);
+                String installedBy = dbManager.getUser();
+                saveMigrationRecord(connection, migrationFileName, checksum, installedBy, executionTime);
+                wasMigrationExecuted = true;
+            }
         }
-        return executionTime;
     }
 
-    /**
-     * Saves a record of the executed migration in the `migration_history` table.
-     *
-     * @param connection    The database connection.
-     * @param fileName      The name of the migration file.
-     * @param checksum      The checksum of the migration file.
-     * @param user          The user who executed the migration.
-     * @param executionTime The execution time in milliseconds.
-     * @throws SQLException If a database access error occurs.
-     */
-    public void saveMigrationRecord(Connection connection, String fileName, long checksum, String user, long executionTime) throws SQLException,MigrationFileNamingException {
+
+    private void saveMigrationRecord(Connection connection, String fileName, long checksum, String user, long executionTime) throws SQLException,MigrationFileNamingException {
         String insertQuery = "INSERT INTO migration_history(version, description, checksum, installed_by, execution_time_ms) VALUES (?, ?, ?, ?, ?)";
 
         String version = getVersionFromFileName(fileName); // Extract version from file name
@@ -208,20 +174,13 @@ public class MigrationRunner {
         }
     }
 
-    /**
-     * Checks if a migration with the specified version has already been executed.
-     *
-     * @param connection The database connection.
-     * @param version    The migration version.
-     * @return True if the migration has already been executed, false otherwise.
-     * @throws SQLException If a database access error occurs.
-     */
-    private boolean isMigrationExecuted(Connection connection, String version) throws SQLException {
+
+    private boolean isMigrationExecuted(Connection connection, String currentMigrationVersion) throws SQLException {
         String query = "SELECT COUNT(*) FROM migration_history WHERE version = ?";
         boolean isVersionAlreadyMigrated = false;
         try (PreparedStatement preparedStatement = connection.prepareStatement(query)
              ) {
-            preparedStatement.setString(1, version);
+            preparedStatement.setString(1, currentMigrationVersion);
             try(ResultSet resultSet = preparedStatement.executeQuery()){
             if (resultSet.next()) {
                 isVersionAlreadyMigrated = resultSet.getInt(1) > 0;
@@ -230,48 +189,29 @@ public class MigrationRunner {
         return isVersionAlreadyMigrated;
     }
 
-    /**
-     * Validates the checksum of a migration file against the checksum stored in the database.
-     *
-     * @param connection The database connection.
-     * @param version    The migration version.
-     * @param checksum   The checksum of the migration file.
-     * @return True if the checksum is valid, false otherwise.
-     * @throws SQLException If a database access error occurs.
-     */
-    private boolean isChecksumValid(Connection connection, String version, long checksum) throws SQLException {
+    private void validateChecksum(Connection connection, String version, long checksum) throws SQLException, InvalidChecksumException {
         String query = "SELECT checksum FROM migration_history WHERE version = ?";
         boolean isChecksumValid = true;
         try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1, version);
             try(ResultSet resultSet = preparedStatement.executeQuery()) {
-
                 if (resultSet.next()) {
                     isChecksumValid = resultSet.getLong(1) == checksum;
                 }
             }
         }
-        return isChecksumValid;
+        if(!isChecksumValid){
+            throw new InvalidChecksumException("Checksum mismatch for version " + version);
+        }
     }
 
-    /**
-     * Extracts the version number from the migration file name.
-     *
-     * @param fileName The name of the migration file.
-     * @return The version number as a string.
-     */
+
     public String getVersionFromFileName(String fileName) {
         String[] splittedString = fileName.split("__");
         String versionWithV = splittedString[0];
         return versionWithV.substring(1); // Remove the 'V' prefix
     }
 
-    /**
-     * Extracts the description from the migration file name.
-     *
-     * @param fileName The name of the migration file.
-     * @return The description as a string.
-     */
     public String getDescFromFileName(String fileName) throws MigrationFileNamingException{
         if(!fileName.contains("__")){
             throw new MigrationFileNamingException("The migration file name is invalid: (" + fileName
@@ -282,6 +222,6 @@ public class MigrationRunner {
         String withoutVersion = fileName.substring(firstDoubleUnderScoreIndex);
         int lastDotIndex = withoutVersion.lastIndexOf('.');
         String leftPart = (lastDotIndex != -1) ? withoutVersion.substring(0, lastDotIndex) : withoutVersion;
-        return leftPart.replaceAll("_", " "); // Replace underscores with spaces
+        return leftPart.replace("_", " "); // Replace underscores with spaces
     }
 }

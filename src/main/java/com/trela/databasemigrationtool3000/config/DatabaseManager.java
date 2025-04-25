@@ -21,7 +21,7 @@ public class DatabaseManager {
     private static final Logger logger = LoggerFactory.getLogger(DatabaseManager.class);
 
     // Database user for tracking who executed the migrations
-    private String user;
+    private final String user;
 
     // HikariDataSource for managing the database connection pool
     private final HikariDataSource dataSource;
@@ -79,11 +79,11 @@ public class DatabaseManager {
 
         // Check if the `migration_history` table exists
         try (Connection connection = getConnection()) {
-            Statement statement = connection.createStatement();
+            try(Statement statement = connection.createStatement()){
             ResultSet resultSet = statement.executeQuery(checkTableQuery);
             if (resultSet.next() && resultSet.getInt(1) > 0) {
                 migrationHistoryTableExists = true; // Table exists
-            }
+            }}
         } catch (SQLException e) {
             // Log the error if the table check fails
             logger.error("Error checking for migration history table!", e);
@@ -93,8 +93,9 @@ public class DatabaseManager {
         if (!migrationHistoryTableExists) {
             logger.info("Creating migration history table!");
             try (Connection connection = getConnection()) {
-                Statement statement = connection.createStatement();
-                statement.execute(migrationTableQuery); // Execute the table creation query
+                try(Statement statement = connection.createStatement()) {
+                    statement.execute(migrationTableQuery);
+                }
             } catch (SQLException e) {
                 // Log the error if table creation fails
                 logger.error("Error creating a migration history table!", e);

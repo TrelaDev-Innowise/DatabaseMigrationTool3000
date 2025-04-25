@@ -6,11 +6,6 @@ public class MigrationVersionGapException extends RuntimeException{
         super(message);
     }
 
-    public MigrationVersionGapException(String message,Throwable cause){
-        super(message,cause);
-    }
-
-
 }
 
 

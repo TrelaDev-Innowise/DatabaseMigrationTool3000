@@ -9,6 +9,8 @@ public class ChecksumUtil {
         crc32.update(content.getBytes());
         return crc32.getValue();
     }
-
+    private ChecksumUtil() {
+        throw new UnsupportedOperationException("Utility class");
+    }
 
 }
