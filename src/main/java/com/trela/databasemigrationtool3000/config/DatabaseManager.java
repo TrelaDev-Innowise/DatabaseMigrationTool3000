@@ -26,13 +26,7 @@ public class DatabaseManager {
     // HikariDataSource for managing the database connection pool
     private final HikariDataSource dataSource;
 
-    /**
-     * Constructor for DatabaseManager.
-     *
-     * @param url      The JDBC URL for the database connection.
-     * @param user     The database username.
-     * @param password The database password.
-     */
+
     public DatabaseManager(String url, String user, String password) {
         // Configure HikariCP connection pool
         HikariConfig config = new HikariConfig();
@@ -43,20 +37,11 @@ public class DatabaseManager {
         this.dataSource = new HikariDataSource(config); // Initialize the connection pool
     }
 
-    /**
-     * Retrieves a database connection from the HikariCP connection pool.
-     *
-     * @return A Connection object to the database.
-     * @throws SQLException If a database access error occurs.
-     */
+
     public Connection getConnection() throws SQLException {
         return dataSource.getConnection();
     }
 
-    /**
-     * Ensures the existence of the `migration_history` table in the database.
-     * If the table does not exist, it creates the table and an index on the `version` column.
-     */
     public void createMigrationTableIfNotExists() {
         boolean migrationHistoryTableExists = false;
 
@@ -103,11 +88,6 @@ public class DatabaseManager {
         }
     }
 
-    /**
-     * Returns the database user associated with this DatabaseManager.
-     *
-     * @return The database username.
-     */
     public String getUser() {
         return user;
     }

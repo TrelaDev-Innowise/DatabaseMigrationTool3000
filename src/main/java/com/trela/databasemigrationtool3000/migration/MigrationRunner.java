@@ -36,11 +36,6 @@ public class MigrationRunner {
         this.dbManager = dbManager;
     }
 
-    /**
-     * Executes database migrations from SQL files in the specified folder.
-     *
-     * @param migrationsFolder The path to the folder containing migration SQL files.
-     */
     public void runMigrations(String migrationsFolder) {
         try (Connection connection = dbManager.getConnection()) {
             wasMigrationExecuted = false;
