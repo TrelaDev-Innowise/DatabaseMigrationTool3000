@@ -57,7 +57,7 @@ public class Main {
 Run the built JAR file with parameters:
 
 ```bash
-java -jar DatabaseMigrationTool3000-1.0-SNAPSHOT.jar   --url=jdbc:postgresql://localhost:5432/mydb   --username=admin   --password=1234   --directory=src/main/resources/migrations
+java -jar DatabaseMigrationTool3000-1.0-SNAPSHOT.jar   --url=jdbc:postgresql://localhost:5432/mymigrationtooldb   --username=admin   --password=1234   --directory="src/main/resources/migrations"
 ```
 
 ## 📂 Migration File Structure
