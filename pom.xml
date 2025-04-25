@@ -86,7 +86,7 @@
                     <configuration>
                         <transformers>
                             <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                <mainClass>com.trela.databasemigrationtool3000.DatabaseMigrationTool3000CLI</mainClass>
+                                <mainClass>com.github.treladev.DatabaseMigrationTool3000CLI</mainClass>
                             </transformer>
                         </transformers>
                     </configuration>

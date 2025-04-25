@@ -28,7 +28,7 @@
             <configuration>
               <transformers>
                 <transformer>
-                  <mainClass>com.trela.databasemigrationtool3000.DatabaseMigrationTool3000CLI</mainClass>
+                  <mainClass>com.github.treladev.DatabaseMigrationTool3000CLI</mainClass>
                 </transformer>
               </transformers>
             </configuration>
